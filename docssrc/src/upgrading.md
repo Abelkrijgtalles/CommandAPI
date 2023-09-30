@@ -1,5 +1,13 @@
 # Upgrading guide
 
+## From 9.?.? to 10.0.0
+
+### Deprecated methods
+
+For 10.0.0, all previously deprecated methods have been removed. Please make sure you use the replacement methods for the deprecated methods. The replacement methods should be described in the JavaDocs of deprecated methods.
+
+-----
+
 ## From 9.0.3 to 9.1.0
 
 ### MultiLiteralArgument changes
