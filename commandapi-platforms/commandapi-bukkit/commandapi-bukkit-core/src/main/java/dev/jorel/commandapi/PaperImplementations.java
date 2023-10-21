@@ -9,9 +9,7 @@ import org.bukkit.plugin.Plugin;
 
 import dev.jorel.commandapi.nms.NMS;
 import io.papermc.paper.event.server.ServerResourcesReloadedEvent;
-import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -37,7 +35,7 @@ public class PaperImplementations {
 		this.isPaperPresent = isPaperPresent;
 		this.isFoliaPresent = isFoliaPresent;
 		this.nmsInstance = nmsInstance;
-		
+
 		Class<? extends CommandSender> tempFeedbackForwardingCommandSender = null;
 		try {
 			tempFeedbackForwardingCommandSender = (Class<? extends CommandSender>) Class.forName("io.papermc.paper.commands.FeedbackForwardingSender");
@@ -46,22 +44,16 @@ public class PaperImplementations {
 		}
 		this.feedbackForwardingCommandSender = tempFeedbackForwardingCommandSender;
 
-        this.paperCommandSendingPool = getThreadPoolExecutor(nmsInstance);
-	}
-
-	@Nullable
-	private static ThreadPoolExecutor getThreadPoolExecutor(NMS<?> nmsInstance) {
-		Class<?> nmsCommandsClass = nmsInstance.getNMSCommandsClass();
+		ThreadPoolExecutor tempPaperCommandSendingPool = null;
 		try {
 			// public static field
-			Field commandSendingPoolField = nmsCommandsClass.getField("COMMAND_SENDING_POOL");
-			return (ThreadPoolExecutor) commandSendingPoolField.get(null);
+			tempPaperCommandSendingPool = (ThreadPoolExecutor) nmsInstance.getNMSCommandsClass().getField("COMMAND_SENDING_POOL").get(null);
 		} catch (NoSuchFieldException | IllegalAccessException e) {
 			// Not a big deal, if the thread pool doesn't exist, then the server also isn't using it
 			//  We don't need to worry about ConcurrentModificationExceptions if Commands packets are
 			//  being built synchronously
-			return null;
 		}
+		this.paperCommandSendingPool = tempPaperCommandSendingPool;
 	}
 
 	/**
