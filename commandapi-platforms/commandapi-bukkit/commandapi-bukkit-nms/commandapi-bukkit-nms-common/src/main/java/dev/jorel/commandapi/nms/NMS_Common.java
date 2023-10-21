@@ -373,6 +373,11 @@ public abstract class NMS_Common extends CommandAPIBukkit<CommandSourceStack> {
 	public abstract CommandDispatcher<CommandSourceStack> getResourcesDispatcher();
 
 	@Override
+	public Class<?> getNMSCommandsClass() {
+		return net.minecraft.commands.Commands.class;
+	}
+
+	@Override
 	public final BaseComponent[] getChat(CommandContext<CommandSourceStack> cmdCtx, String key) throws CommandSyntaxException {
 		return ComponentSerializer.parse(Serializer.toJson(MessageArgument.getMessage(cmdCtx, key)));
 	}

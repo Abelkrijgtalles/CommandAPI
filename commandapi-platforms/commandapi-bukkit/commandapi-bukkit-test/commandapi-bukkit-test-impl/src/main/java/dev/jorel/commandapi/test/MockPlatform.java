@@ -77,6 +77,14 @@ public abstract class MockPlatform<CLW> extends CommandAPIBukkit<CLW> {
 	}
 
 	@Override
+	public Class<?> getNMSCommandsClass() {
+		// This is currently only used by PaperImplementations to access a Paper-specific nms field
+		//  MockBukkit does not simulate a Paper server, so this field never exists in testing anyway
+		//  So, just return a class that doesn't have the field, and this works equivalently to a Spigot server
+		return Object.class;
+	}
+
+	@Override
 	public final BukkitCommandSender<? extends CommandSender> getSenderForCommand(CommandContext<CLW> cmdCtx, boolean forceNative) {
 		return getCommandSenderFromCommandSource(cmdCtx.getSource());
 	}

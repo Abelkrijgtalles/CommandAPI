@@ -541,6 +541,11 @@ public class NMS_1_16_R2 extends NMSWrapper_1_16_R2 {
 	}
 
 	@Override
+	public Class<?> getNMSCommandsClass() {
+		return net.minecraft.server.v1_16_R2.CommandDispatcher.class;
+	}
+
+	@Override
 	public BaseComponent[] getChat(CommandContext<CommandListenerWrapper> cmdCtx, String key) throws CommandSyntaxException {
 		return ComponentSerializer.parse(ChatSerializer.a(ArgumentChat.a(cmdCtx, key)));
 	}

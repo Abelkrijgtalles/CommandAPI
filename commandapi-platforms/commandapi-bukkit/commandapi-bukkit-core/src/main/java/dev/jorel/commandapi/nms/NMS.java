@@ -402,6 +402,11 @@ public interface NMS<CommandListenerWrapper> {
 	CommandDispatcher<CommandListenerWrapper> getResourcesDispatcher();
 
 	/**
+	 * @return The class object representing {@code net.minecraft.commands.Commands} (or equivalent mapped class).
+	 */
+	Class<?> getNMSCommandsClass();
+
+	/**
 	 * Returns the Server's internal (OBC) CommandMap
 	 * 
 	 * @return A SimpleCommandMap from the OBC server
