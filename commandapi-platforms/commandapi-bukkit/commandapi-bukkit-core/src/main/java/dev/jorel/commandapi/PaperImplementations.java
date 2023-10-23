@@ -10,8 +10,8 @@ import org.bukkit.plugin.Plugin;
 import dev.jorel.commandapi.nms.NMS;
 import io.papermc.paper.event.server.ServerResourcesReloadedEvent;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Supplier;
 
@@ -150,12 +150,10 @@ public class PaperImplementations {
 		// Otherwise, submit the modify task to the pool.
 		//  The pool only runs one task at a time (see https://github.com/JorelAli/CommandAPI/pull/501#issuecomment-1773959895),
 		//  so this ensures we don't modify the commands while a command-building process is reading them
-		CompletableFuture<T> result = new CompletableFuture<>();
-
-		paperCommandSendingPool.execute(() -> result.complete(modifyTask.get()));
+		Future<T> futureResult = paperCommandSendingPool.submit(modifyTask::get);
 
 		try {
-			return result.get();
+			return futureResult.get();
 		} catch (ExecutionException e) {
 			Throwable cause = e.getCause();
 
@@ -172,7 +170,7 @@ public class PaperImplementations {
 			//  going to be handled anywhere else, so we just have to wrap it in a RuntimeException and get out of here.
 			//  The `modifyTask` probably did not complete correctly, so we don't have a reasonable result to return.
 			Thread.currentThread().interrupt();
-            throw new RuntimeException("The commands could not be updated :(. The thread was interrupted.", e);
+            throw new IllegalStateException("The commands could not be updated :(. The thread was interrupted.", e);
         }
     }
 }
