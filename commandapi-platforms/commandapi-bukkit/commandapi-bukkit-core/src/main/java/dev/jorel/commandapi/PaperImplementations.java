@@ -10,8 +10,8 @@ import org.bukkit.plugin.Plugin;
 import dev.jorel.commandapi.nms.NMS;
 import io.papermc.paper.event.server.ServerResourcesReloadedEvent;
 
-import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Supplier;
 
@@ -122,17 +122,11 @@ public class PaperImplementations {
 	 *
 	 * @param modifyTask The task to run that modifies the command trees.
 	 */
-	public void modifyCommandTreesSafely(Runnable modifyTask) {
-		try {
-			modifyCommandTreesSafely((Callable<Object>) () -> {
-				modifyTask.run();
-				return null;
-			});
-		} catch (Exception e) {
-			// `modifyTask` should not be throwing any checked exceptions anyway
-			//  since that would violate the signature of Runnable
-			throw new RuntimeException(e);
-		}
+	public void modifyCommandTreesAndAvoidPaperCME(Runnable modifyTask) {
+		modifyCommandTreesAndAvoidPaperCME(() -> {
+			modifyTask.run();
+			return null;
+		});
 	}
 
 	/**
@@ -147,25 +141,38 @@ public class PaperImplementations {
 	 * @return The result of running the {@code modifyTask}.
 	 * @param <T> The class of the object returned by the {@code modifyTask}.
 	 */
-	public <T> T modifyCommandTreesSafely(Supplier<T> modifyTask) {
-		try {
-			return modifyCommandTreesSafely((Callable<T>) modifyTask::get);
-		} catch (Exception e) {
-			// `modifyTask` should not be throwing any checked exceptions anyway
-			//  since that would violate the signature of Supplier
-			throw new RuntimeException(e);
-		}
-	}
-
-	private <T> T modifyCommandTreesSafely(Callable<T> modifyTask) throws Exception {
-		if(paperCommandSendingPool == null) {
+	public <T> T modifyCommandTreesAndAvoidPaperCME(Supplier<T> modifyTask) {
+		if(paperCommandSendingPool == null || paperCommandSendingPool.isShutdown()) {
 			// If the server isn't building Commands packets async (probably because we're on Spigot),
 			//  it is safe to run the task immediately
-			return modifyTask.call();
+			return modifyTask.get();
 		}
 		// Otherwise, submit the modify task to the pool.
-		//  The pool only runs one task at a time, so this ensures we don't modify
-		//  the commands while a command-building process is reading them
-		return paperCommandSendingPool.invokeAll(List.of(modifyTask)).get(0).get();
-	}
+		//  The pool only runs one task at a time (see https://github.com/JorelAli/CommandAPI/pull/501#issuecomment-1773959895),
+		//  so this ensures we don't modify the commands while a command-building process is reading them
+		CompletableFuture<T> result = new CompletableFuture<>();
+
+		paperCommandSendingPool.execute(() -> result.complete(modifyTask.get()));
+
+		try {
+			return result.get();
+		} catch (ExecutionException e) {
+			Throwable cause = e.getCause();
+
+			// `modifyTask` may very well throw runtime exceptions, pass it on
+			if(cause instanceof RuntimeException runtimeExceptionCause) throw runtimeExceptionCause;
+
+			// `modifyTask` should not throw a checked exception, since that violates the signature of Supplier
+			//  This path shouldn't happen, so it is reasonable to freak out with a generic exception
+			throw new AssertionError("Unexpected exception. `Supplier modifyTask` should not throw a checked exception.", e);
+        } catch (InterruptedException e) {
+			// As far as I can tell, this is the best way to handle this exception (see https://stackoverflow.com/a/18926205).
+			//  The InterruptedException means that this thread should stop whatever it's doing ASAP.
+			//  I don't think it makes sense to add `throws InterruptedException` to the method signature since it's not
+			//  going to be handled anywhere else, so we just have to wrap it in a RuntimeException and get out of here.
+			//  The `modifyTask` probably did not complete correctly, so we don't have a reasonable result to return.
+			Thread.currentThread().interrupt();
+            throw new RuntimeException("The commands could not be updated :(. The thread was interrupted.", e);
+        }
+    }
 }

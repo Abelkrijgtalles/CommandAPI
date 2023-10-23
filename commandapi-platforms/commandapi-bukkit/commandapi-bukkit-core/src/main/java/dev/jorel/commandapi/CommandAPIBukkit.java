@@ -467,7 +467,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	@Override
 	public void postCommandRegistration(RegisteredCommand registeredCommand, LiteralCommandNode<Source> resultantNode, List<LiteralCommandNode<Source>> aliasNodes) {
 		if(!CommandAPI.canRegister()) {
-			paper.modifyCommandTreesSafely(() -> {
+			paper.modifyCommandTreesAndAvoidPaperCME(() -> {
 				// Usually, when registering commands during server startup, we can just put our commands into the
 				// `net.minecraft.server.MinecraftServer#vanillaCommandDispatcher` and leave it. As the server finishes setup,
 				// it and the CommandAPI do some extra stuff to make everything work, and we move on.
@@ -533,7 +533,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 
 	@Override
 	public LiteralCommandNode<Source> registerCommandNode(LiteralArgumentBuilder<Source> node) {
-		return paper.modifyCommandTreesSafely(() -> getBrigadierDispatcher().register(node));
+		return paper.modifyCommandTreesAndAvoidPaperCME(() -> getBrigadierDispatcher().register(node));
 	}
 
 	@Override
@@ -560,7 +560,7 @@ public abstract class CommandAPIBukkit<Source> implements CommandAPIPlatform<Arg
 	}
 
 	private void unregisterInternal(String commandName, boolean unregisterNamespaces, boolean unregisterBukkit) {
-		paper.modifyCommandTreesSafely(() -> {
+		paper.modifyCommandTreesAndAvoidPaperCME(() -> {
 			CommandAPI.logInfo("Unregistering command /" + commandName);
 
 			if (!unregisterBukkit) {
